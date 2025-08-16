@@ -18,6 +18,7 @@ include("TreeValidation.jl")
 include("TerminalEvaluation.jl")
 include("TreeSizeValidation.jl")
 include("TreeMemory.jl")
+include("AdvancedIsomorphism.jl")
 
 # Import submodules for easier access
 using .TreeNode
@@ -29,6 +30,7 @@ using .TreeValidation
 using .TerminalEvaluation
 using .TreeSizeValidation
 using .TreeMemory
+using .AdvancedIsomorphism
 
 # Re-export all types and functions from submodules
 
@@ -88,6 +90,14 @@ export NodePool, allocate_node!, free_node!
 export LazyTree, expand_node!, expand_to_depth!
 export prune_tree!, prune_by_depth!, prune_randomly!, prune_by_importance!
 export memory_stats
+
+# From AdvancedIsomorphism
+export BoardTexture, BoardFeatures
+export classify_board, count_gaps, count_straight_draws
+export has_straight, calculate_connectedness
+export canonicalize_ranks, create_canonical_pattern
+export canonicalize_turn_card, canonicalize_river_card
+export BoardIsomorphism, create_isomorphism_maps, get_canonical_board
 
 # Convenience function that combines tree building with statistics and validation
 """

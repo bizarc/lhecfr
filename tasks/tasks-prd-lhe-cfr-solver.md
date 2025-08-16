@@ -345,3 +345,19 @@
   - **Memory Statistics**: Detailed memory usage analysis
 - **Memory Savings**: Achieved 30-50% memory reduction for typical trees
 - **Test Results**: 3,449 tests passing (60 new tests, 4 pending fixes)
+
+### 2025-08-16 - Advanced Card Isomorphism (Task 1.11.1)
+- **Completed**: Board texture classification system
+- **Files Created**:
+  - `src/AdvancedIsomorphism.jl` - Advanced card isomorphism module (461 lines)
+  - `test/test_advanced_isomorphism.jl` - Board texture tests (259 lines)
+- **Files Modified**:
+  - `src/Tree.jl` - Added AdvancedIsomorphism module and exports
+  - `test/runtests.jl` - Added advanced isomorphism tests
+- **Key Features**:
+  - **Board Texture Classification**: Rainbow, two-tone, monotone detection
+  - **Connectivity Analysis**: Gap counting, straight draw detection
+  - **Rank Distribution**: High/medium/low card categorization
+  - **Canonical Representation**: Strategic equivalence preserving
+  - **Turn/River Canonicalization**: Impact-based categorization
+- **Status**: Sub-task 1.11.1 complete, 43 tests passing
