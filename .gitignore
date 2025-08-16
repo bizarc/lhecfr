@@ -1,0 +1,92 @@
+# Julia Files
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+deps/deps.jl
+deps/build.log
+deps/downloads/
+deps/usr/
+deps/src/
+
+# Julia package manager
+Manifest.toml
+/docs/build/
+/docs/site/
+
+# Julia compiled files
+*.ji
+*.jld
+*.jld2
+
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.#*
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.project
+.settings/
+
+# Test output
+test_output.txt
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Compiled files
+*.o
+*.so
+*.dylib
+*.dll
+
+# Environment files
+.env
+.env.local
+
+# Coverage files
+coverage/
+*.lcov
+.coverage
+
+# Profiling files
+*.prof
+perf.*
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Documentation build files
+docs/_build/
+docs/Manifest.toml
+
+# Package build files
+build/
+dist/
+*.egg-info/
+
+# Binary files
+*.exe
+*.out
+*.app
+
+# Data files (if large)
+*.csv
+*.dat
+*.bin
+
+# Solver output files (project specific)
+strategies/
+solutions/
+checkpoints/
+*.strategy
+*.solution
