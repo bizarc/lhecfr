@@ -17,6 +17,7 @@ include("TreeTraversal.jl")
 include("TreeValidation.jl")
 include("TerminalEvaluation.jl")
 include("TreeSizeValidation.jl")
+include("TreeMemory.jl")
 
 # Import submodules for easier access
 using .TreeNode
@@ -27,6 +28,7 @@ using .TreeTraversal
 using .TreeValidation
 using .TerminalEvaluation
 using .TreeSizeValidation
+using .TreeMemory
 
 # Re-export all types and functions from submodules
 
@@ -79,6 +81,13 @@ export evaluate_terminal_node!, evaluate_all_terminals!
 export TheoreticalTreeSizes, calculate_theoretical_sizes
 export validate_tree_size, print_tree_statistics
 export count_preflop_sequences, count_postflop_sequences
+
+# From TreeMemory
+export CompactNode, CompactTree, compress_tree, decompress_tree
+export NodePool, allocate_node!, free_node!
+export LazyTree, expand_node!, expand_to_depth!
+export prune_tree!, prune_by_depth!, prune_randomly!, prune_by_importance!
+export memory_stats
 
 # Convenience function that combines tree building with statistics and validation
 """
