@@ -5,6 +5,7 @@ include("Deck.jl")
 include("Evaluator.jl")
 include("Tree.jl")
 include("CFR.jl")
+include("CFRTraversal.jl")
 include("BestResponse.jl")
 include("Persist.jl")
 include("CLI.jl")
@@ -14,9 +15,11 @@ using .Deck
 using .Evaluator
 using .Tree
 using .CFR
+using .CFRTraversal
 using .BestResponse
 using .Persist
 using .CLI
+using Random
 
 export run_demo
 
@@ -24,12 +27,22 @@ function run_demo(; iterations=1000, seed=42)
     println("LHE CFR demo starting… (iterations=$(iterations))")
     Random.seed!(seed)
     params = GameTypes.GameParams()  # default heads-up LHE
-    gt = Tree.build_game_tree(params)
-    cfr_state = CFR.init_state(gt)
-    CFR.train!(gt, cfr_state; iterations=iterations, plus=true, verbose=true)
-    br = BestResponse.exploitability(gt, cfr_state.avg_strategy)
-    println("Estimated exploitability (bb/100 approximation): ", br)
-    return br
+    gt = Tree.build_game_tree(params, preflop_only=true, verbose=false)
+    
+    # Create CFR configuration and state
+    config = CFR.CFRConfig(use_cfr_plus=true)
+    cfr_state = CFR.CFRState(gt, config)
+    
+    # Train the solver
+    CFRTraversal.train!(gt, cfr_state; iterations=iterations, verbose=true)
+    
+    # TODO: Calculate actual exploitability once BestResponse is implemented
+    # br = BestResponse.exploitability(gt, cfr_state)
+    # println("Estimated exploitability (bb/100 approximation): ", br)
+    
+    println("Training complete. Information sets: $(CFR.get_infoset_count(cfr_state))")
+    
+    return cfr_state
 end
 
 end # module

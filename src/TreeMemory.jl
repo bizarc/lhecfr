@@ -63,7 +63,7 @@ end
 """
 Pack node information into a UInt64 for compact storage.
 """
-function pack_node_info(player::UInt8, street::TreeNode.Street, terminal_type::Int,
+function pack_node_info(player::UInt8, street::Street, terminal_type::Int,
                        facing_bet::Bool, is_terminal::Bool, num_children::Int,
                        betting_history_idx::UInt32, utilities_idx::UInt16)
     packed = UInt64(0)
@@ -86,7 +86,7 @@ Unpack node information from a UInt64.
 """
 function unpack_node_info(packed::UInt64)
     player = UInt8(packed & 0x3)
-    street = TreeNode.Street((packed >> 2) & 0x3)
+    street = Street((packed >> 2) & 0x3)
     terminal_type = Int((packed >> 4) & 0x3)
     facing_bet = Bool((packed >> 6) & 0x1)
     is_terminal = Bool((packed >> 7) & 0x1)
@@ -117,18 +117,24 @@ function compress_tree(tree::TreeBuilder.GameTree)
     sizehint!(nodes, tree.num_nodes)
     sizehint!(children_pool, tree.num_nodes * 2)  # Estimate
     
-    # Process nodes in BFS order for better cache locality
-    queue = [(tree.root, UInt32(0))]
-    node_to_compact_id = Dict{TreeNode.GameNode, UInt32}()
+    # Process nodes in the same order as the original tree
+    node_to_compact_id = Dict{GameNode, UInt32}()
     next_id = UInt32(1)
     
-    while !isempty(queue)
-        node, parent_id = popfirst!(queue)
-        
-        # Assign compact ID
+    # First pass: assign compact IDs to all nodes in the same order as tree.nodes
+    for node in tree.nodes
         compact_id = next_id
         next_id += 1
         node_to_compact_id[node] = compact_id
+    end
+    
+    # Second pass: create compact nodes in the same order
+    for node in tree.nodes
+        # Find parent ID
+        parent_id = UInt32(0)
+        if node.parent !== nothing
+            parent_id = node_to_compact_id[node.parent]
+        end
         
         # Handle betting history
         if !haskey(betting_history_map, node.betting_history)
@@ -145,18 +151,13 @@ function compress_tree(tree::TreeBuilder.GameTree)
         end
         
         # Store children indices
-        first_child_idx = UInt32(length(children_pool) + 1)
         num_children = length(node.children)
         
         if num_children > 0
+            first_child_idx = UInt32(length(children_pool) + 1)
             # Reserve space for children (will be filled later)
             for _ in 1:num_children
                 push!(children_pool, UInt32(0))
-            end
-            
-            # Queue children for processing
-            for child in node.children
-                push!(queue, (child, compact_id))
             end
         else
             first_child_idx = UInt32(0)  # No children
@@ -171,7 +172,7 @@ function compress_tree(tree::TreeBuilder.GameTree)
         
         # Create compact node
         compact_node = CompactNode(
-            compact_id,
+            node_to_compact_id[node],
             parent_id,
             node.pot,
             UInt32(node.infoset_id),
@@ -182,15 +183,14 @@ function compress_tree(tree::TreeBuilder.GameTree)
         push!(nodes, compact_node)
     end
     
-    # Second pass: fill in children IDs
-    for node in tree.nodes
+    # Third pass: fill in children IDs
+    for (i, node) in enumerate(tree.nodes)
         if !isempty(node.children)
-            compact_id = node_to_compact_id[node]
-            compact_node = nodes[compact_id]
+            compact_node = nodes[i]
             
-            for (i, child) in enumerate(node.children)
+            for (j, child) in enumerate(node.children)
                 child_compact_id = node_to_compact_id[child]
-                children_pool[compact_node.first_child_idx + i - 1] = child_compact_id
+                children_pool[compact_node.first_child_idx + j - 1] = child_compact_id
             end
         end
     end
@@ -213,7 +213,7 @@ Convert a CompactTree back to a regular GameTree.
 """
 function decompress_tree(compact_tree::CompactTree, params::GameTypes.GameParams)
     # Create mapping from compact ID to GameNode
-    id_to_node = Dict{UInt32, TreeNode.GameNode}()
+    id_to_node = Dict{UInt32, GameNode}()
     
     # First pass: create all nodes
     for compact_node in compact_tree.nodes
@@ -228,9 +228,10 @@ function decompress_tree(compact_tree::CompactTree, params::GameTypes.GameParams
         utilities = utilities_idx > 0 ? compact_tree.utilities_pool[utilities_idx] : nothing
         
         # Create GameNode
-        node = TreeNode.GameNode(
+        node_type = is_terminal ? TerminalNode : PlayerNode
+        node = GameNode(
             GameTypes.NodeId(compact_node.id),
-            TreeNode.PlayerNode,  # Will be corrected based on is_terminal
+            node_type,
             player,
             street,
             compact_node.pot,
@@ -271,20 +272,28 @@ function decompress_tree(compact_tree::CompactTree, params::GameTypes.GameParams
     # Create GameTree
     tree = TreeBuilder.GameTree(params)
     tree.root = id_to_node[UInt32(1)]
-    tree.num_nodes = compact_tree.num_nodes
-    tree.num_player_nodes = compact_tree.num_player_nodes
-    tree.num_terminal_nodes = compact_tree.num_terminal_nodes
-    tree.num_infosets = compact_tree.num_infosets
     
-    # Rebuild node lists
-    for node in values(id_to_node)
+    # Clear the node lists that were initialized with the root
+    empty!(tree.nodes)
+    empty!(tree.player_nodes)
+    empty!(tree.terminal_nodes)
+    
+    # Rebuild node lists in the same order as the original tree
+    for compact_node in compact_tree.nodes
+        node = id_to_node[compact_node.id]
         push!(tree.nodes, node)
-        if !node.is_terminal && TreeNode.is_player_node(node)
+        if !node.is_terminal && is_player_node(node)
             push!(tree.player_nodes, node)
         elseif node.is_terminal
             push!(tree.terminal_nodes, node)
         end
     end
+    
+    # Update counts based on actual nodes
+    tree.num_nodes = length(tree.nodes)
+    tree.num_player_nodes = length(tree.player_nodes)
+    tree.num_terminal_nodes = length(tree.terminal_nodes)
+    tree.num_infosets = compact_tree.num_infosets
     
     return tree
 end
@@ -297,7 +306,7 @@ end
 A memory pool for efficient node allocation and deallocation.
 """
 mutable struct NodePool
-    nodes::Vector{TreeNode.GameNode}
+    nodes::Vector{GameNode}
     free_indices::Vector{Int}
     allocated::Int
     max_size::Int
@@ -317,12 +326,12 @@ function allocate_node!(pool::NodePool, args...)
     if !isempty(pool.free_indices)
         # Reuse a freed node
         idx = pop!(pool.free_indices)
-        node = TreeNode.GameNode(args...)
+        node = GameNode(args...)
         pool.nodes[idx] = node
         return node
     elseif pool.allocated < pool.max_size
         # Allocate new node
-        node = TreeNode.GameNode(args...)
+        node = GameNode(args...)
         push!(pool.nodes, node)
         pool.allocated += 1
         return node
@@ -334,7 +343,7 @@ end
 """
 Free a node back to the pool.
 """
-function free_node!(pool::NodePool, node::TreeNode.GameNode)
+function free_node!(pool::NodePool, node::GameNode)
     idx = findfirst(n -> n === node, pool.nodes)
     if idx !== nothing
         push!(pool.free_indices, idx)
@@ -350,7 +359,7 @@ A tree that constructs nodes on-demand rather than all at once.
 """
 mutable struct LazyTree
     params::GameTypes.GameParams
-    root::TreeNode.GameNode
+    root::GameNode
     expansion_depth::Int  # How deep to expand immediately
     max_depth::Int        # Maximum depth to ever expand
     nodes_created::Int
@@ -366,11 +375,11 @@ function LazyTree(params::GameTypes.GameParams;
     pool = NodePool()
     root = allocate_node!(pool,
         GameTypes.NodeId(1),
-        TreeNode.PlayerNode,
+        PlayerNode,
         UInt8(0),  # SB acts first pre-flop
-        TreeNode.Preflop,
+        Preflop,
         Float32(params.small_blind + params.big_blind),
-        0,
+        UInt8(0),
         false,
         nothing
     )
@@ -386,12 +395,12 @@ end
 """
 Expand a node's children if not already expanded.
 """
-function expand_node!(tree::LazyTree, node::TreeNode.GameNode)
+function expand_node!(tree::LazyTree, node::GameNode)
     if !isempty(node.children) || node.is_terminal
         return  # Already expanded or terminal
     end
     
-    depth = TreeNode.get_node_depth(node)
+    depth = get_node_depth(node)
     if depth >= tree.max_depth
         # Force terminal at max depth
         node.is_terminal = true
@@ -400,7 +409,7 @@ function expand_node!(tree::LazyTree, node::TreeNode.GameNode)
     end
     
     # Generate children based on current game state
-    if node.street == TreeNode.Preflop
+    if node.street == Preflop
         expand_preflop_node!(tree, node)
     else
         expand_postflop_node!(tree, node)
@@ -410,7 +419,7 @@ end
 """
 Expand a pre-flop node.
 """
-function expand_preflop_node!(tree::LazyTree, node::TreeNode.GameNode)
+function expand_preflop_node!(tree::LazyTree, node::GameNode)
     # Generate valid actions
     # This is a simplified version - full implementation would use BettingSequence
     
@@ -424,14 +433,14 @@ function expand_preflop_node!(tree::LazyTree, node::TreeNode.GameNode)
     
     for action in actions
         child = create_child_node!(tree, node, action)
-        TreeNode.add_child!(node, child, action)
+        add_child!(node, child, action)
     end
 end
 
 """
 Expand a post-flop node.
 """
-function expand_postflop_node!(tree::LazyTree, node::TreeNode.GameNode)
+function expand_postflop_node!(tree::LazyTree, node::GameNode)
     # Similar to pre-flop but with different logic
     expand_preflop_node!(tree, node)  # Simplified for now
 end
@@ -439,12 +448,12 @@ end
 """
 Create a child node based on parent and action.
 """
-function create_child_node!(tree::LazyTree, parent::TreeNode.GameNode, action::GameTypes.Action)
+function create_child_node!(tree::LazyTree, parent::GameNode, action::GameTypes.Action)
     tree.nodes_created += 1
     child_id = GameTypes.NodeId(tree.nodes_created)
     
     # Calculate new game state
-    new_pot = TreeNode.calculate_pot_after_action(parent, action, tree.params)
+    new_pot = calculate_pot_after_action(parent, action, tree.params)
     new_player = parent.player == 0 ? UInt8(1) : UInt8(0)
     new_facing_bet = action == GameTypes.BetOrRaise
     
@@ -454,18 +463,18 @@ function create_child_node!(tree::LazyTree, parent::TreeNode.GameNode, action::G
     
     child = allocate_node!(tree.node_pool,
         child_id,
-        TreeNode.PlayerNode,
+        PlayerNode,
         new_player,
         parent.street,
         new_pot,
-        terminal_type,
+        UInt8(terminal_type),
         new_facing_bet,
         nothing
     )
     
     child.parent = parent
     child.is_terminal = is_terminal
-    child.betting_history = TreeNode.update_betting_history(parent.betting_history, action)
+    child.betting_history = update_betting_history(parent.betting_history, action)
     
     return child
 end
@@ -473,7 +482,7 @@ end
 """
 Expand tree to a certain depth from a node.
 """
-function expand_to_depth!(tree::LazyTree, node::TreeNode.GameNode, current_depth::Int)
+function expand_to_depth!(tree::LazyTree, node::GameNode, current_depth::Int)
     if current_depth >= tree.expansion_depth || node.is_terminal
         return
     end
@@ -522,7 +531,7 @@ Prune tree by limiting depth.
 """
 function prune_by_depth!(tree::TreeBuilder.GameTree, max_nodes::Int)
     # Binary search for the right depth
-    max_depth = TreeNode.get_node_depth(tree.root) + 10  # Reasonable upper bound
+    max_depth = get_node_depth(tree.root) + 10  # Reasonable upper bound
     
     for depth in 1:max_depth
         nodes_at_depth = count_nodes_to_depth(tree.root, depth)
@@ -537,7 +546,7 @@ end
 """
 Count nodes up to a certain depth.
 """
-function count_nodes_to_depth(node::TreeNode.GameNode, max_depth::Int, current_depth::Int = 0)
+function count_nodes_to_depth(node::GameNode, max_depth::Int, current_depth::Int = 0)
     if current_depth > max_depth
         return 0
     end
@@ -553,7 +562,7 @@ end
 """
 Remove all nodes below a certain depth.
 """
-function prune_below_depth!(node::TreeNode.GameNode, max_depth::Int, current_depth::Int = 0)
+function prune_below_depth!(node::GameNode, max_depth::Int, current_depth::Int = 0)
     if current_depth >= max_depth
         # Make this node terminal
         empty!(node.children)
@@ -594,7 +603,7 @@ Calculate memory usage statistics for a tree.
 """
 function memory_stats(tree::TreeBuilder.GameTree)
     # Calculate memory usage
-    node_memory = tree.num_nodes * sizeof(TreeNode.GameNode)
+    node_memory = tree.num_nodes * sizeof(GameNode)
     
     # Estimate string memory (betting histories)
     history_memory = 0
@@ -605,7 +614,7 @@ function memory_stats(tree::TreeBuilder.GameTree)
     history_memory = sum(sizeof, unique_histories)
     
     # Children arrays
-    children_memory = sum(node -> length(node.children) * sizeof(TreeNode.GameNode), tree.nodes)
+    children_memory = sum(node -> length(node.children) * sizeof(GameNode), tree.nodes)
     
     total_memory = node_memory + history_memory + children_memory
     

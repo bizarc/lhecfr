@@ -12,6 +12,7 @@ using ..GameTypes
 include("TreeNode.jl")
 include("BettingSequence.jl")
 include("InfoSet.jl")
+include("InfoSetManager.jl")
 include("TreeBuilder.jl")
 include("TreeTraversal.jl")
 include("TreeValidation.jl")
@@ -24,6 +25,7 @@ include("AdvancedIsomorphism.jl")
 using .TreeNode
 using .BettingSequence
 using .InfoSet
+using .InfoSetManager
 using .TreeBuilder
 using .TreeTraversal
 using .TreeValidation
@@ -53,6 +55,14 @@ export count_betting_sequences
 export CardAbstraction, InformationSet
 export canonicalize_hand, canonicalize_suits, cards_to_string
 export create_infoset_id, create_infoset, get_infoset_id
+
+# From InfoSetManager
+export CFRInfoSet, InfoSetStorage
+export get_or_create_infoset!, get_infoset, set_action_labels!, get_action_labels
+export update_regrets!, update_strategy_sum!
+export get_current_strategy, get_average_strategy
+export reset_regrets!, reset_strategy_sum!
+export get_storage_statistics, prune_unused!
 
 # From TreeBuilder
 export GameTree

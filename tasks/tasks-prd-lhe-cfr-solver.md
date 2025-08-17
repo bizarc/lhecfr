@@ -4,14 +4,16 @@
 
 ### Core Modules
 - `src/Deck.jl` - Card deck management and shuffling (needs expansion for suit isomorphism)
-- `src/Tree.jl` - Game tree construction for HU-LHE (currently stub, needs full implementation)
-- `src/CFR.jl` - CFR+ algorithm implementation (currently stub, needs full implementation)
+- `src/Tree.jl` - Game tree construction for HU-LHE (FULLY IMPLEMENTED)
+- `src/CFR.jl` - CFR+ algorithm configuration and state management (IMPLEMENTED)
+- `src/CFRTraversal.jl` - CFR traversal algorithm implementation (IMPLEMENTED)
 - `src/BestResponse.jl` - Best response and exploitability calculation (currently stub)
 - `src/Persist.jl` - Strategy persistence and loading (basic structure exists)
 - `src/CLI.jl` - Command-line interface (needs expansion)
 
 ### New Modules to Create
 - `src/InfoSet.jl` - Information set representation and management (CREATED)
+- `src/InfoSetManager.jl` - CFR-specific information set storage and management (CREATED)
 - `src/Abstraction.jl` - Card and action abstraction utilities
 - `src/Strategy.jl` - Strategy extraction and analysis
 - `src/API.jl` - RESTful API implementation
@@ -21,8 +23,11 @@
 ### Test Files
 - `test/test_deck.jl` - Tests for deck operations and suit isomorphism
 - `test/test_tree.jl` - Game tree construction validation (CREATED)
-- `test/test_cfr.jl` - CFR algorithm correctness tests
+- `test/test_cfr.jl` - CFR algorithm correctness tests (CREATED)
+- `test/test_cfr_traversal.jl` - CFR traversal algorithm tests (CREATED)
+- `test/test_terminal_evaluation.jl` - Terminal node evaluation tests (CREATED)
 - `test/test_infoset.jl` - Information set tests (CREATED)
+- `test/test_infoset_manager.jl` - InfoSetManager tests (CREATED)
 - `test/test_tree_validation.jl` - Tree size validation tests (CREATED)
 - `test/test_tree_traversal.jl` - Tree traversal utility tests (CREATED)
 - `test/test_strategy.jl` - Strategy computation tests
@@ -59,7 +64,7 @@
 
 ## Tasks
 
-- [ ] 1.0 **Implement Game Tree Construction (M2)**
+- [x] 1.0 **Implement Game Tree Construction (M2)**
   - [x] 1.1 Design and implement game node structure with fields for player, pot, street, actions, children
   - [x] 1.2 Create betting sequence generator respecting LHE rules (blinds, bet sizes, raise caps)
   - [x] 1.3 Implement tree builder for pre-flop with all valid action sequences
@@ -70,15 +75,15 @@
   - [x] 1.8 Validate tree size against theoretical expectations (write tests)
   - [x] 1.9 Implement tree traversal utilities (depth-first, breadth-first)
   - [x] 1.10 Add memory-efficient tree storage using compact representations
-  - [ ] 1.11 Implement advanced card isomorphism (board texture equivalence, turn/river canonicalization)
+  - [x] 1.11 Implement advanced card isomorphism (board texture equivalence, turn/river canonicalization)
 
 - [ ] 2.0 **Implement Core CFR+ Algorithm (M3)**
-  - [ ] 2.1 Create InfoSet module with regret and strategy sum storage
-  - [ ] 2.2 Implement regret matching for strategy computation from regrets
-  - [ ] 2.3 Build CFR traversal function with reach probabilities
-  - [ ] 2.4 Add counterfactual value calculation at terminal nodes
-  - [ ] 2.5 Implement regret update logic with CFR+ modifications (zeroing negatives)
-  - [ ] 2.6 Create strategy averaging mechanism for convergence
+  - [x] 2.1 Create InfoSet module with regret and strategy sum storage
+  - [x] 2.2 Implement regret matching for strategy computation from regrets
+  - [x] 2.3 Build CFR traversal function with reach probabilities
+  - [x] 2.4 Add counterfactual value calculation at terminal nodes
+  - [x] 2.5 Implement regret update logic with CFR+ modifications (zeroing negatives)
+  - [x] 2.6 Create strategy averaging mechanism for convergence
   - [ ] 2.7 Add iteration control with configurable stopping criteria
   - [ ] 2.8 Implement chance node sampling for Monte Carlo CFR variant
   - [ ] 2.9 Test convergence on simple games (Kuhn poker, simplified LHE)
@@ -361,3 +366,108 @@
   - **Canonical Representation**: Strategic equivalence preserving
   - **Turn/River Canonicalization**: Impact-based categorization
 - **Status**: Sub-task 1.11.1 complete, 43 tests passing
+
+### 2025-08-17 - Task 1.0 Complete
+- **Milestone Achieved**: Game Tree Construction (M2) fully implemented
+- **All Subtasks Complete**: Tasks 1.1 through 1.11 have been successfully completed
+- **Key Accomplishments**:
+  - Full game tree construction for HU-LHE with pre-flop and post-flop
+  - Memory-efficient tree storage with 30-50% memory reduction
+  - Advanced card isomorphism for state-space reduction
+  - Comprehensive test coverage with 3,449+ tests passing
+  - Modular architecture with separated responsibilities
+- **Ready for Next Phase**: CFR+ algorithm implementation (Task 2.0)
+
+### 2025-08-17 - CFR InfoSet Storage (Task 2.1)
+- **Completed**: InfoSet module with regret and strategy sum storage
+- **Files Created**:
+  - `src/InfoSetManager.jl` - CFR-specific information set management (265 lines)
+  - `test/test_infoset_manager.jl` - Comprehensive tests (304 lines)
+- **Files Modified**:
+  - `src/Tree.jl` - Added InfoSetManager module inclusion and exports
+  - `test/runtests.jl` - Added InfoSetManager tests
+- **Key Features**:
+  - CFRInfoSet structure with regrets and strategy sums
+  - InfoSetStorage for managing all information sets
+  - Regret matching for strategy computation
+  - CFR+ modifications (negative regret flooring)
+  - Strategy averaging for convergence
+  - Memory pruning for large games
+- **Test Results**: 65 new tests passing
+- **Next Step**: Implement regret matching (Task 2.2)
+
+### 2025-08-17 - CFR Module with Regret Matching (Task 2.2)
+- **Completed**: Regret matching strategy computation integrated into CFR module
+- **Files Created**:
+  - `src/CFR.jl` - Complete CFR module rewrite (341 lines)
+  - `test/test_cfr.jl` - Comprehensive CFR tests (340 lines)
+- **Files Modified**:
+  - `src/LHECFR.jl` - Updated to use new CFR module
+  - `src/InfoSetManager.jl` - Fixed empty collection bug in statistics
+  - `test/runtests.jl` - Added CFR tests
+- **Key Features**:
+  - CFRConfig for algorithm configuration (CFR+, Linear CFR, sampling)
+  - CFRState for managing solver state
+  - Integration with InfoSetManager for regret storage
+  - Regret matching implementation with CFR+ modifications
+  - Strategy averaging with Linear CFR weighting support
+  - Action pruning based on regret thresholds
+  - Memory management and progress tracking
+- **Test Results**: 68 CFR tests passing
+- **Next Step**: Build CFR traversal function (Task 2.3)
+
+### 2025-08-17 - CFR Traversal Implementation (Task 2.3)
+- **Completed**: Core CFR traversal algorithm with reach probabilities
+- **Files Created**:
+  - `src/CFRTraversal.jl` - CFR traversal algorithm implementation (295 lines)
+  - `test/test_cfr_traversal.jl` - Comprehensive traversal tests (283 lines)
+- **Files Modified**:
+  - `src/LHECFR.jl` - Added CFRTraversal module and updated train! call
+  - `src/CFR.jl` - Removed stub train! function
+  - `test/runtests.jl` - Added CFR traversal tests
+- **Key Features**:
+  - Recursive CFR traversal with counterfactual value computation
+  - Terminal node evaluation (fold utilities implemented, showdown placeholder)
+  - Chance node handling with uniform probabilities
+  - Player node handling with regret updates
+  - Reach probability tracking and propagation
+  - Strategy sum updates weighted by reach probabilities
+  - Zero-sum game property maintenance
+  - CFR+ negative regret flooring
+  - Full training loop implementation
+- **Test Results**: 41 CFR traversal tests passing, 3,686 total tests passing
+- **Next Step**: Add counterfactual value calculation at terminal nodes (Task 2.4)
+
+### 2025-08-17 - Terminal Node Evaluation (Task 2.4)
+- **Completed**: Counterfactual value calculation at terminal nodes with hand evaluation
+- **Files Created**:
+  - `test/test_terminal_evaluation.jl` - Comprehensive terminal evaluation tests (267 lines)
+- **Files Modified**:
+  - `src/CFRTraversal.jl` - Added full showdown evaluation using Evaluator module
+  - `test/runtests.jl` - Added terminal evaluation tests
+- **Key Features**:
+  - Full hand evaluation at showdown nodes using 7-card evaluator
+  - Proper pot distribution based on hand strength comparison
+  - Split pot handling for equal hand strengths
+  - Fold utility calculation based on pot investments
+  - Integration with existing Evaluator module for hand ranking
+  - Zero-sum property maintained (winner's gain = loser's loss)
+- **Test Results**: 11 terminal evaluation tests passing, 3,697 total tests passing
+- **Next Step**: Implement regret update logic with CFR+ modifications (Task 2.5)
+
+### 2025-08-17 - Regret Update Logic & Strategy Averaging (Tasks 2.5 & 2.6)
+- **Completed**: Both tasks were already implemented as part of earlier work
+- **Task 2.5 - Regret Update Logic with CFR+ Modifications**:
+  - Already implemented in `InfoSetManager.update_regrets!` with negative regret flooring
+  - `CFR.update_regrets!` respects CFR+ configuration setting
+  - `CFRTraversal.handle_player_node` properly calls regret updates
+  - Linear CFR weighting and discount factors also implemented
+  - Tests in place for CFR+ modifications
+- **Task 2.6 - Strategy Averaging Mechanism**:
+  - `InfoSetManager` maintains `strategy_sum` for each information set
+  - `update_strategy_sum!` accumulates strategies weighted by reach probabilities
+  - `get_average_strategy` computes the final converged strategy
+  - `CFRTraversal` properly updates strategy sums during traversal
+  - Linear CFR weighting applied to strategy averaging
+- **Status**: Both tasks confirmed complete with existing implementation
+- **Next Step**: Add iteration control with configurable stopping criteria (Task 2.7)

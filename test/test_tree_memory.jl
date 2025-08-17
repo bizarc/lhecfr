@@ -79,7 +79,7 @@ using LHECFR.Tree
             UInt8(0),
             Tree.Preflop,
             Float32(3.0),
-            0,
+            UInt8(0),
             false,
             nothing
         )
@@ -93,7 +93,7 @@ using LHECFR.Tree
             UInt8(1),
             Tree.Preflop,
             Float32(3.0),
-            0,
+            UInt8(0),
             false,
             nothing
         )
@@ -111,7 +111,7 @@ using LHECFR.Tree
             UInt8(0),
             Tree.Preflop,
             Float32(4.0),
-            0,
+            UInt8(0),
             false,
             nothing
         )
