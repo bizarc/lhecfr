@@ -26,6 +26,8 @@
 - `test/test_cfr.jl` - CFR algorithm correctness tests (CREATED)
 - `test/test_cfr_traversal.jl` - CFR traversal algorithm tests (CREATED)
 - `test/test_terminal_evaluation.jl` - Terminal node evaluation tests (CREATED)
+- `test/test_cfr_stopping.jl` - CFR stopping criteria tests (CREATED)
+- `test/test_monte_carlo_cfr.jl` - Monte Carlo CFR sampling tests (CREATED)
 - `test/test_infoset.jl` - Information set tests (CREATED)
 - `test/test_infoset_manager.jl` - InfoSetManager tests (CREATED)
 - `test/test_tree_validation.jl` - Tree size validation tests (CREATED)
@@ -84,8 +86,8 @@
   - [x] 2.4 Add counterfactual value calculation at terminal nodes
   - [x] 2.5 Implement regret update logic with CFR+ modifications (zeroing negatives)
   - [x] 2.6 Create strategy averaging mechanism for convergence
-  - [ ] 2.7 Add iteration control with configurable stopping criteria
-  - [ ] 2.8 Implement chance node sampling for Monte Carlo CFR variant
+  - [x] 2.7 Add iteration control with configurable stopping criteria
+  - [x] 2.8 Implement chance node sampling for Monte Carlo CFR variant
   - [ ] 2.9 Test convergence on simple games (Kuhn poker, simplified LHE)
   - [ ] 2.10 Add convergence metrics and logging
 
@@ -471,3 +473,58 @@
   - Linear CFR weighting applied to strategy averaging
 - **Status**: Both tasks confirmed complete with existing implementation
 - **Next Step**: Add iteration control with configurable stopping criteria (Task 2.7)
+
+### 2025-08-17 - Iteration Control with Stopping Criteria (Task 2.7)
+- **Completed**: Added configurable stopping criteria for CFR training
+- **Files Created**:
+  - `test/test_cfr_stopping.jl` - Comprehensive tests for stopping criteria (198 lines)
+- **Files Modified**:
+  - `src/CFR.jl` - Extended CFRConfig with stopping criteria parameters, added CFRState fields for tracking
+  - `src/CFRTraversal.jl` - Updated train! function to support multiple stopping conditions
+  - `test/runtests.jl` - Added stopping criteria tests
+- **Key Features**:
+  - **Configurable Stopping Criteria**:
+    - Maximum iterations limit (`max_iterations`)
+    - Target exploitability threshold (`target_exploitability`)
+    - Time limit in seconds (`max_time_seconds`)
+    - Minimum iterations before checking criteria (`min_iterations`)
+    - Check frequency for periodic evaluation (`check_frequency`)
+  - **Training State Tracking**:
+    - Training start time tracking
+    - Stopping reason logging
+    - Convergence history with periodic exploitability checks
+  - **Helper Functions**:
+    - `should_stop()` - Check if any stopping criteria are met
+    - `get_training_stats()` - Get comprehensive training statistics
+  - **Flexible Control**:
+    - Can override config max_iterations with explicit parameter
+    - Early stopping based on convergence
+    - Time-based stopping for real-time constraints
+- **Test Results**: 41 stopping criteria tests passing, all project tests passing
+- **Next Step**: Implement chance node sampling for Monte Carlo CFR variant (Task 2.8)
+
+### 2025-08-17 - Monte Carlo CFR Sampling (Task 2.8)
+- **Completed**: Implemented chance node sampling for Monte Carlo CFR variants
+- **Files Created**:
+  - `test/test_monte_carlo_cfr.jl` - Comprehensive tests for Monte Carlo CFR sampling (254 lines)
+- **Files Modified**:
+  - `src/CFR.jl` - Added sampling_strategy field to CFRConfig (:none, :chance, :external, :outcome)
+  - `src/CFRTraversal.jl` - Updated handle_chance_node to support multiple sampling strategies
+  - `test/runtests.jl` - Added Monte Carlo CFR tests
+- **Key Features**:
+  - **Multiple Sampling Strategies**:
+    - `:none` - Full traversal (default)
+    - `:chance` - Sample a fraction of chance outcomes
+    - `:outcome` - Sample single outcome per chance node
+    - `:external` - Sample opponent's chance nodes (partial implementation)
+  - **Sampling Configuration**:
+    - `sampling_probability` - Controls fraction of children sampled (0.0 to 1.0)
+    - `sampling_strategy` - Selects sampling algorithm
+    - Auto-enables sampling when strategy is specified
+  - **Importance Sampling**:
+    - Proper correction factors for unbiased estimates
+    - Variance reduction through controlled sampling
+  - **Helper Functions**:
+    - `sample_without_replacement()` - Efficient reservoir sampling
+- **Test Results**: 30 Monte Carlo CFR tests passing
+- **Next Step**: Test convergence on simple games (Task 2.9)

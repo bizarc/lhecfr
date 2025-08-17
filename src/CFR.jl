@@ -24,9 +24,17 @@ struct CFRConfig
     use_cfr_plus::Bool           # Use CFR+ (floor negative regrets)
     use_linear_weighting::Bool   # Use Linear CFR weighting
     use_sampling::Bool           # Use Monte Carlo sampling
+    sampling_strategy::Symbol     # :none, :chance, :external, :outcome
     sampling_probability::Float64 # Probability for chance sampling
     prune_threshold::Float64     # Threshold for pruning low-regret actions
     discount_factor::Float64     # Discount factor for regret updates
+    
+    # Stopping criteria
+    max_iterations::Int          # Maximum number of iterations
+    target_exploitability::Float64 # Stop when exploitability falls below this
+    max_time_seconds::Float64    # Maximum training time in seconds
+    min_iterations::Int          # Minimum iterations before checking stopping criteria
+    check_frequency::Int         # How often to check stopping criteria
 end
 
 """
@@ -38,17 +46,35 @@ function CFRConfig(;
     use_cfr_plus::Bool = true,
     use_linear_weighting::Bool = false,
     use_sampling::Bool = false,
+    sampling_strategy::Symbol = :none,  # :none, :chance, :external, :outcome
     sampling_probability::Float64 = 1.0,
     prune_threshold::Float64 = -1e9,  # Effectively no pruning by default
-    discount_factor::Float64 = 1.0
+    discount_factor::Float64 = 1.0,
+    # Stopping criteria defaults
+    max_iterations::Int = 1000000,
+    target_exploitability::Float64 = 0.001,  # 1 milli-blind
+    max_time_seconds::Float64 = Inf,
+    min_iterations::Int = 100,
+    check_frequency::Int = 100
 )
+    # Auto-enable sampling if a strategy is specified
+    if sampling_strategy != :none && !use_sampling
+        use_sampling = true
+    end
+    
     return CFRConfig(
         use_cfr_plus,
         use_linear_weighting,
         use_sampling,
+        sampling_strategy,
         sampling_probability,
         prune_threshold,
-        discount_factor
+        discount_factor,
+        max_iterations,
+        target_exploitability,
+        max_time_seconds,
+        min_iterations,
+        check_frequency
     )
 end
 
@@ -64,6 +90,8 @@ mutable struct CFRState
     total_iterations::Int                    # Total iterations to run
     exploitability::Float64                  # Current exploitability
     convergence_history::Vector{Float64}     # History of exploitability
+    training_start_time::Float64             # Start time of training (seconds since epoch)
+    stopping_reason::String                  # Reason for stopping training
 end
 
 """
@@ -80,7 +108,9 @@ function CFRState(tree::Tree.GameTree, config::CFRConfig = CFRConfig())
         0,  # iteration
         0,  # total_iterations
         Inf,  # exploitability (unknown initially)
-        Float64[]  # convergence_history
+        Float64[],  # convergence_history
+        0.0,  # training_start_time (set when training starts)
+        ""  # stopping_reason
     )
 end
 
@@ -338,6 +368,58 @@ end
 # to avoid circular dependencies and keep the traversal logic separate
 
 # Export all public functions and types
+"""
+    should_stop(state::CFRState)
+
+Check if any stopping criteria have been met.
+Returns (should_stop::Bool, reason::String)
+"""
+function should_stop(state::CFRState)
+    # Check minimum iterations requirement
+    if state.iteration < state.config.min_iterations
+        return false, ""
+    end
+    
+    # Check maximum iterations
+    if state.iteration >= state.config.max_iterations
+        return true, "Maximum iterations reached ($(state.iteration))"
+    end
+    
+    # Check exploitability (if available)
+    if state.exploitability <= state.config.target_exploitability
+        return true, "Target exploitability reached ($(state.exploitability) <= $(state.config.target_exploitability))"
+    end
+    
+    # Check time limit
+    if state.training_start_time > 0
+        elapsed_time = time() - state.training_start_time
+        if elapsed_time >= state.config.max_time_seconds
+            return true, "Time limit reached ($(round(elapsed_time, digits=1))s >= $(state.config.max_time_seconds)s)"
+        end
+    end
+    
+    return false, ""
+end
+
+"""
+    get_training_stats(state::CFRState)
+
+Get a summary of training statistics.
+"""
+function get_training_stats(state::CFRState)
+    elapsed_time = state.training_start_time > 0 ? time() - state.training_start_time : 0.0
+    
+    return Dict(
+        "iterations" => state.iteration,
+        "infosets" => get_infoset_count(state),
+        "exploitability" => state.exploitability,
+        "elapsed_time" => elapsed_time,
+        "iterations_per_second" => state.iteration > 0 ? state.iteration / elapsed_time : 0.0,
+        "stopping_reason" => state.stopping_reason,
+        "convergence_history" => state.convergence_history
+    )
+end
+
 export CFRConfig, CFRState
 export get_or_create_infoset_for_node, compute_strategy_from_regrets
 export update_regrets!, update_strategy_sum!
@@ -345,5 +427,6 @@ export get_strategy, get_average_strategy
 export reset_regrets!, reset_strategy_sum!
 export get_infoset_count, get_memory_usage
 export print_progress
+export should_stop, get_training_stats
 
 end # module
