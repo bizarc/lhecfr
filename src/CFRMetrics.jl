@@ -207,7 +207,7 @@ function update_metrics!(metrics::ConvergenceMetrics, state::CFR.CFRState,
     metrics.max_regret = max_regret
     
     # Performance metrics
-    metrics.infosets_visited = length(state.storage.infosets)
+    metrics.infosets_visited = CFR.get_infoset_count(state)
     metrics.memory_usage = CFR.get_memory_usage(state)
     
     # Update history

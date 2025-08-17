@@ -11,6 +11,7 @@ using ..Tree
 using ..Tree.TreeNode
 using ..Tree.InfoSet
 using ..Tree.InfoSetManager
+using ..Tree.TreeIndexing
 
 # Forward declare the traversal module that will be included later
 # This avoids circular dependencies
@@ -85,6 +86,8 @@ Main state container for the CFR algorithm.
 """
 mutable struct CFRState
     storage::InfoSetManager.InfoSetStorage  # Information set storage
+    indexed_storage::Union{Nothing, TreeIndexing.IndexedInfoSetStorage}  # Indexed storage for efficiency
+    tree::Union{Nothing, Tree.GameTree}     # Reference to game tree
     config::CFRConfig                        # Algorithm configuration
     iteration::Int                           # Current iteration number
     total_iterations::Int                    # Total iterations to run
@@ -100,11 +103,20 @@ end
 
 Initialize CFR state for a game tree.
 """
-function CFRState(tree::Tree.GameTree, config::CFRConfig = CFRConfig())
+function CFRState(tree::Tree.GameTree, config::CFRConfig = CFRConfig(), use_indexing::Bool = false)
     storage = InfoSetManager.InfoSetStorage()
+    
+    # Create indexed storage if requested (recommended for performance)
+    indexed_storage = if use_indexing
+        TreeIndexing.IndexedInfoSetStorage(tree)
+    else
+        nothing
+    end
     
     return CFRState(
         storage,
+        indexed_storage,
+        tree,
         config,
         0,  # iteration
         0,  # total_iterations
@@ -126,6 +138,31 @@ Get or create the information set for a game node.
 function get_or_create_infoset_for_node(state::CFRState, node::TreeNode.GameNode,
                                        hole_cards::Union{Nothing, Vector{GameTypes.Card}} = nothing,
                                        board_cards::Union{Nothing, Vector{GameTypes.Card}} = nothing)
+    # Use indexed storage if available for O(1) lookup
+    if state.indexed_storage !== nothing
+        cfr_infoset = TreeIndexing.get_or_create_indexed_infoset!(
+            state.indexed_storage,
+            node,
+            hole_cards,
+            board_cards
+        )
+        
+        # Store action labels if needed
+        infoset_id = cfr_infoset.id
+        if length(node.children) > 0 && length(InfoSetManager.get_action_labels(state.indexed_storage.storage, infoset_id)) == 0
+            action_labels = String[]
+            for child in node.children
+                action = length(child.betting_history) > length(node.betting_history) ?
+                         string(child.betting_history[end]) : "?"
+                push!(action_labels, action)
+            end
+            InfoSetManager.set_action_labels!(state.indexed_storage.storage, infoset_id, action_labels)
+        end
+        
+        return cfr_infoset
+    end
+    
+    # Fallback to standard storage
     # Create information set ID
     infoset_id = InfoSet.create_infoset_id(
         node.player,
@@ -294,7 +331,9 @@ function get_average_strategy(state::CFRState, node::TreeNode.GameNode,
         board_cards
     )
     
-    cfr_infoset = InfoSetManager.get_infoset(state.storage, infoset_id)
+    # Check appropriate storage
+    storage_to_check = state.indexed_storage !== nothing ? state.indexed_storage.storage : state.storage
+    cfr_infoset = InfoSetManager.get_infoset(storage_to_check, infoset_id)
     if cfr_infoset === nothing
         # Never visited - return uniform
         num_actions = length(node.children)
@@ -310,7 +349,8 @@ end
 Reset all regrets to zero (useful for CFR+ restart).
 """
 function reset_regrets!(state::CFRState)
-    for cfr_infoset in values(state.storage.infosets)
+    infosets = state.indexed_storage !== nothing ? state.indexed_storage.storage.infosets : state.storage.infosets
+    for cfr_infoset in values(infosets)
         InfoSetManager.reset_regrets!(cfr_infoset)
     end
 end
@@ -321,7 +361,8 @@ end
 Reset all strategy sums to zero (useful for restarting averaging).
 """
 function reset_strategy_sum!(state::CFRState)
-    for cfr_infoset in values(state.storage.infosets)
+    infosets = state.indexed_storage !== nothing ? state.indexed_storage.storage.infosets : state.storage.infosets
+    for cfr_infoset in values(infosets)
         InfoSetManager.reset_strategy_sum!(cfr_infoset)
     end
 end
@@ -332,7 +373,7 @@ end
 Get the number of information sets discovered so far.
 """
 function get_infoset_count(state::CFRState)
-    return length(state.storage.infosets)
+    return state.indexed_storage !== nothing ? length(state.indexed_storage.storage.infosets) : length(state.storage.infosets)
 end
 
 """
@@ -341,7 +382,8 @@ end
 Get estimated memory usage in MB.
 """
 function get_memory_usage(state::CFRState)
-    stats = InfoSetManager.get_storage_statistics(state.storage)
+    storage_to_check = state.indexed_storage !== nothing ? state.indexed_storage.storage : state.storage
+    stats = InfoSetManager.get_storage_statistics(storage_to_check)
     return stats.estimated_memory_mb
 end
 

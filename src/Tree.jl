@@ -20,6 +20,8 @@ include("TerminalEvaluation.jl")
 include("TreeSizeValidation.jl")
 include("TreeMemory.jl")
 include("AdvancedIsomorphism.jl")
+include("InfoSetCache.jl")
+include("TreeIndexing.jl")
 
 # Import submodules for easier access
 using .TreeNode
@@ -33,6 +35,8 @@ using .TerminalEvaluation
 using .TreeSizeValidation
 using .TreeMemory
 using .AdvancedIsomorphism
+using .InfoSetCache
+using .TreeIndexing
 
 # Re-export all types and functions from submodules
 
@@ -108,6 +112,18 @@ export has_straight, calculate_connectedness
 export canonicalize_ranks, create_canonical_pattern
 export canonicalize_turn_card, canonicalize_river_card
 export BoardIsomorphism, create_isomorphism_maps, get_canonical_board
+
+# From InfoSetCache
+export CacheConfig, CacheStatistics, LRUInfoSetCache
+export get_cached!, put_cached!, clear_cache!, get_statistics
+export BatchLookup, batch_get!, batch_put!
+export print_cache_statistics
+
+# From TreeIndexing
+export TreeIndex, IndexedInfoSetStorage
+export build_tree_index, get_infoset_id_for_node
+export get_or_create_indexed_infoset!, print_index_statistics
+export get_cache_statistics
 
 # Convenience function that combines tree building with statistics and validation
 """

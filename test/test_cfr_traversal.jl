@@ -142,7 +142,11 @@ using LHECFR.CFRTraversal
         
         # Check that some regrets were updated
         has_nonzero_regrets = false
-        for cfr_infoset in values(state.storage.infosets)
+        # Get infosets from appropriate storage
+        infosets = state.indexed_storage !== nothing ? 
+                   state.indexed_storage.storage.infosets : 
+                   state.storage.infosets
+        for cfr_infoset in values(infosets)
             if any(cfr_infoset.regrets .!= 0)
                 has_nonzero_regrets = true
                 break
@@ -169,7 +173,11 @@ using LHECFR.CFRTraversal
         
         # Check for card-specific information sets
         has_card_infoset = false
-        for id in keys(state.storage.infosets)
+        # Get infosets from appropriate storage
+        infosets = state.indexed_storage !== nothing ? 
+                   state.indexed_storage.storage.infosets : 
+                   state.storage.infosets
+        for id in keys(infosets)
             if occursin("AKs", id) || occursin("QQ", id)
                 has_card_infoset = true
                 break

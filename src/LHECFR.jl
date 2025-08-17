@@ -7,6 +7,7 @@ include("Tree.jl")
 include("CFR.jl")
 include("CFRMetrics.jl")
 include("CFRTraversal.jl")
+include("ThreadedCFR.jl")
 include("BestResponse.jl")
 include("Persist.jl")
 include("CLI.jl")
@@ -18,6 +19,7 @@ using .Tree
 using .CFR
 using .CFRMetrics
 using .CFRTraversal
+using .ThreadedCFR
 using .BestResponse
 using .Persist
 using .CLI
@@ -31,9 +33,9 @@ function run_demo(; iterations=1000, seed=42)
     params = GameTypes.GameParams()  # default heads-up LHE
     gt = Tree.build_game_tree(params, preflop_only=true, verbose=false)
     
-    # Create CFR configuration and state
+    # Create CFR configuration and state (with indexing for performance)
     config = CFR.CFRConfig(use_cfr_plus=true)
-    cfr_state = CFR.CFRState(gt, config)
+    cfr_state = CFR.CFRState(gt, config, true)  # Enable indexing for better performance
     
     # Train the solver
     CFRTraversal.train!(gt, cfr_state; iterations=iterations, verbose=true)
