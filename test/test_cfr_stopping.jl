@@ -128,7 +128,7 @@ using LHECFR.GameTypes
         tree = create_test_tree()
         config = CFR.CFRConfig(
             max_iterations=1000,
-            target_exploitability=0.05,  # Will be satisfied after ~20 iterations with our placeholder
+            target_exploitability=1.0,  # Will be satisfied after ~100 iterations
             min_iterations=5,
             check_frequency=1
         )

@@ -92,6 +92,7 @@ mutable struct CFRState
     convergence_history::Vector{Float64}     # History of exploitability
     training_start_time::Float64             # Start time of training (seconds since epoch)
     stopping_reason::String                  # Reason for stopping training
+    metrics::Any                             # Convergence metrics (CFRMetrics.ConvergenceMetrics)
 end
 
 """
@@ -110,7 +111,8 @@ function CFRState(tree::Tree.GameTree, config::CFRConfig = CFRConfig())
         Inf,  # exploitability (unknown initially)
         Float64[],  # convergence_history
         0.0,  # training_start_time (set when training starts)
-        ""  # stopping_reason
+        "",  # stopping_reason
+        nothing  # metrics (initialized during training)
     )
 end
 

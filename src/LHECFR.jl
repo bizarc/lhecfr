@@ -5,6 +5,7 @@ include("Deck.jl")
 include("Evaluator.jl")
 include("Tree.jl")
 include("CFR.jl")
+include("CFRMetrics.jl")
 include("CFRTraversal.jl")
 include("BestResponse.jl")
 include("Persist.jl")
@@ -15,6 +16,7 @@ using .Deck
 using .Evaluator
 using .Tree
 using .CFR
+using .CFRMetrics
 using .CFRTraversal
 using .BestResponse
 using .Persist
