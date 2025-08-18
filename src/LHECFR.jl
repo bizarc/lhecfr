@@ -11,6 +11,7 @@ include("ThreadedCFR.jl")
 include("SolverConfig.jl")
 include("ProgressTracker.jl")
 include("Checkpoint.jl")
+include("MemoryManager.jl")
 include("PreflopSolver.jl")
 include("BestResponse.jl")
 include("Persist.jl")
@@ -27,6 +28,7 @@ using .ThreadedCFR
 using .SolverConfig
 using .ProgressTracker
 using .Checkpoint
+using .MemoryManager
 using .PreflopSolver
 using .BestResponse
 using .Persist

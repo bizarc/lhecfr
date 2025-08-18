@@ -193,15 +193,15 @@ function save_checkpoint(state::CFR.CFRState, manager::CheckpointManager,
                         metadata::Dict{String, Any} = Dict{String, Any}())
     
     # Use provided values or fall back to state values
-    iteration = iteration !== nothing ? iteration : state.iteration
-    exploitability = exploitability !== nothing ? exploitability : state.exploitability
+    actual_iteration = iteration !== nothing ? iteration : state.iteration
+    actual_exploitability = exploitability !== nothing ? exploitability : state.exploitability
     
     options = manager.options
     
     # Generate checkpoint filename
     timestamp = now()
     timestamp_str = Dates.format(timestamp, "yyyymmdd_HHMMSS")
-    filename = "checkpoint_iter$(iteration)_$(timestamp_str).jls"
+    filename = "checkpoint_iter$(actual_iteration)_$(timestamp_str).jls"
     if options.compress
         filename *= ".gz"
     end
@@ -212,8 +212,8 @@ function save_checkpoint(state::CFR.CFRState, manager::CheckpointManager,
     
     # Basic information
     checkpoint_data["version"] = "1.0.0"
-    checkpoint_data["iteration"] = iteration
-    checkpoint_data["exploitability"] = exploitability
+    checkpoint_data["iteration"] = actual_iteration
+    checkpoint_data["exploitability"] = actual_exploitability
     checkpoint_data["timestamp"] = timestamp
     checkpoint_data["metadata"] = metadata
     
@@ -255,9 +255,9 @@ function save_checkpoint(state::CFR.CFRState, manager::CheckpointManager,
     file_size = filesize(filepath)
     
     # Check if this is the best checkpoint
-    is_best = exploitability < manager.best_exploitability
+    is_best = actual_exploitability < manager.best_exploitability
     if is_best
-        manager.best_exploitability = exploitability
+        manager.best_exploitability = actual_exploitability
         manager.best_checkpoint_file = filepath
     end
     
@@ -265,8 +265,8 @@ function save_checkpoint(state::CFR.CFRState, manager::CheckpointManager,
     info = CheckpointInfo(
         filename,
         filepath,
-        iteration,
-        exploitability,
+        actual_iteration,
+        actual_exploitability,
         timestamp,
         file_size,
         options.compress,
@@ -278,9 +278,9 @@ function save_checkpoint(state::CFR.CFRState, manager::CheckpointManager,
     push!(manager.checkpoints, info)
     
     # Update manager state
-    manager.last_checkpoint_iteration = iteration
+    manager.last_checkpoint_iteration = actual_iteration
     manager.last_checkpoint_time = time()
-    manager.last_checkpoint_exploitability = exploitability
+    manager.last_checkpoint_exploitability = actual_exploitability
     
     # Cleanup old checkpoints if needed
     cleanup_old_checkpoints(manager)
@@ -369,7 +369,9 @@ Automatically save a checkpoint if conditions are met.
 function auto_checkpoint!(state::CFR.CFRState, manager::CheckpointManager,
                          tree::Union{Tree.GameTree, Nothing} = nothing)
     if should_checkpoint(manager, state.iteration, state.exploitability)
-        save_checkpoint(state, manager, tree)
+        save_checkpoint(state, manager, tree, 
+                       iteration=state.iteration, 
+                       exploitability=state.exploitability)
     end
 end
 
@@ -394,6 +396,11 @@ function list_checkpoints(checkpoint_dir::String)
             if m !== nothing
                 iteration = parse(Int, m[1])
                 
+                # Initialize variables with defaults
+                exploitability = Inf
+                timestamp = now()
+                metadata = Dict{String, Any}()
+                
                 # Try to load for more info
                 try
                     data = load_checkpoint(filepath)
@@ -401,10 +408,8 @@ function list_checkpoints(checkpoint_dir::String)
                     timestamp = get(data, "timestamp", now())
                     metadata = get(data, "metadata", Dict{String, Any}())
                 catch e
-                    # If loading fails, use defaults
-                    exploitability = Inf
+                    # If loading fails, use defaults based on file
                     timestamp = unix2datetime(mtime(filepath))
-                    metadata = Dict{String, Any}()
                 end
                 
                 info = CheckpointInfo(

@@ -30,6 +30,7 @@ Manages all information sets and their CFR data.
 struct InfoSetStorage
     infosets::Dict{String, CFRInfoSet}  # Map from infoset ID to CFR data
     action_lookup::Dict{String, Vector{String}}  # Map from infoset ID to action labels
+    lock::ReentrantLock  # Thread safety lock
 end
 
 """
@@ -40,7 +41,8 @@ Create an empty information set storage.
 function InfoSetStorage()
     return InfoSetStorage(
         Dict{String, CFRInfoSet}(),
-        Dict{String, Vector{String}}()
+        Dict{String, Vector{String}}(),
+        ReentrantLock()
     )
 end
 
@@ -50,16 +52,18 @@ end
 Get an existing CFR information set or create a new one if it doesn't exist.
 """
 function get_or_create_infoset!(storage::InfoSetStorage, infoset_id::String, num_actions::Int)
-    if !haskey(storage.infosets, infoset_id)
-        storage.infosets[infoset_id] = CFRInfoSet(
-            infoset_id,
-            num_actions,
-            zeros(Float64, num_actions),     # Initialize regrets to 0
-            zeros(Float64, num_actions),     # Initialize strategy sum to 0
-            0                                 # No iterations yet
-        )
+    lock(storage.lock) do
+        if !haskey(storage.infosets, infoset_id)
+            storage.infosets[infoset_id] = CFRInfoSet(
+                infoset_id,
+                num_actions,
+                zeros(Float64, num_actions),     # Initialize regrets to 0
+                zeros(Float64, num_actions),     # Initialize strategy sum to 0
+                0                                 # No iterations yet
+            )
+        end
+        return storage.infosets[infoset_id]
     end
-    return storage.infosets[infoset_id]
 end
 
 """
@@ -77,7 +81,9 @@ end
 Store the action labels for an information set (for debugging and analysis).
 """
 function set_action_labels!(storage::InfoSetStorage, infoset_id::String, actions::Vector{String})
-    storage.action_lookup[infoset_id] = actions
+    lock(storage.lock) do
+        storage.action_lookup[infoset_id] = actions
+    end
 end
 
 """

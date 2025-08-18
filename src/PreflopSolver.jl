@@ -10,6 +10,7 @@ using Printf
 using Statistics
 using ..GameTypes
 using ..Tree
+using ..Tree.TreeNode
 using ..Tree.InfoSet
 using ..Tree.InfoSetManager
 using ..CFR
@@ -517,11 +518,11 @@ Get the strategy for specific cards in a position.
 """
 function get_preflop_strategy(result::PreflopResult, position::String, cards::Vector{GameTypes.Card})
     # Build the information set ID for these cards
-    player = position == "SB" ? 1 : 2
+    player = position == "SB" ? UInt8(1) : UInt8(2)
     infoset_id = InfoSet.create_infoset_id(
         player,
-        UInt8(0),  # 0 = preflop
-        Int[],  # Empty betting history for opening position
+        TreeNode.Preflop,  # Use the proper enum value
+        "",  # Empty betting history string for opening position
         cards,
         GameTypes.Card[]  # No board cards pre-flop
     )

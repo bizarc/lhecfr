@@ -12,6 +12,13 @@ using LHECFR.Tree.InfoSetManager
 using Dates
 using Serialization
 
+# Import checkpoint functions for convenience
+import LHECFR.Checkpoint: CheckpointOptions, CheckpointInfo, CheckpointManager
+import LHECFR.Checkpoint: create_checkpoint_manager, save_checkpoint, load_checkpoint
+import LHECFR.Checkpoint: list_checkpoints, delete_checkpoint, cleanup_old_checkpoints
+import LHECFR.Checkpoint: auto_checkpoint!, should_checkpoint
+import LHECFR.Checkpoint: format_file_size
+
 @testset "Checkpoint Tests" begin
     
     # Create temporary directory for test checkpoints
