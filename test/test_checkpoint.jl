@@ -245,6 +245,9 @@ import LHECFR.Checkpoint: format_file_size
     end
     
     @testset "Strategies Only Mode" begin
+        # Use a unique directory for this test to avoid conflicts
+        strategies_test_dir = mktempdir()
+        
         params = GameTypes.GameParams(stack=4)
         tree = Tree.build_game_tree(params, preflop_only=true, verbose=false)
         cfr_state = CFR.CFRState(tree, CFR.CFRConfig())
@@ -257,7 +260,7 @@ import LHECFR.Checkpoint: format_file_size
         
         # Save strategies only
         opts = CheckpointOptions(
-            checkpoint_dir = test_dir,
+            checkpoint_dir = strategies_test_dir,
             save_strategies_only = true,
             save_full_state = false
         )
@@ -273,6 +276,9 @@ import LHECFR.Checkpoint: format_file_size
         strategies = checkpoint_data["strategies"]
         @test haskey(strategies, "test1")
         @test strategies["test1"] ≈ [1/3, 2/3]  # Normalized strategy
+        
+        # Cleanup
+        rm(strategies_test_dir, recursive=true, force=true)
     end
     
     @testset "Delete Checkpoint" begin

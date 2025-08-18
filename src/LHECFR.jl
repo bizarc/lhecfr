@@ -14,6 +14,7 @@ include("Checkpoint.jl")
 include("MemoryManager.jl")
 include("PreflopSolver.jl")
 include("BestResponse.jl")
+include("SolverValidation.jl")
 include("Persist.jl")
 include("CLI.jl")
 
@@ -31,6 +32,7 @@ using .Checkpoint
 using .MemoryManager
 using .PreflopSolver
 using .BestResponse
+using .SolverValidation
 using .Persist
 using .CLI
 using Random

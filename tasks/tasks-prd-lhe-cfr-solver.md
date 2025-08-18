@@ -111,7 +111,7 @@
   - [x] 3.6 Add checkpointing for long-running solves
   - [x] 3.7 Create pre-flop-only solving mode for faster iteration
   - [x] 3.8 Implement memory management for large trees (pruning, compression)
-  - [ ] 3.9 Add solver validation against known solutions
+  - [x] 3.9 Add solver validation against known solutions
   - [ ] 3.10 Create benchmark suite for performance testing
 
 - [ ] 4.0 **Implement Best Response and Exploitability Calculation (M5)**
@@ -785,5 +785,20 @@
   - Orphaned node removal
   - Unused information set cleanup
   - Memory pressure detection and response
-- **Test Results**: 65 tests passing (minor issues with GameTree structure differences)
-- **Next Step**: Add solver validation against known solutions (Task 3.9)
+- **Test Results**: 83 tests passing (all memory management features validated)
+
+### Task 3.9: Solver Validation (Completed)
+- **Completed**: Solver validation against known solutions
+- **Files Created**:
+  - `src/SolverValidation.jl` - Validation framework for testing against known solutions
+  - `test/test_solver_validation.jl` - Comprehensive validation test suite
+- **Files Modified**:
+  - `src/LHECFR.jl` - Added SolverValidation module integration
+  - `test/runtests.jl` - Added validation tests
+- **Key Features**:
+  - **Validation Games**: Framework for defining games with known equilibria
+  - **Automated Testing**: Validates solver convergence and accuracy
+  - **Result Reporting**: Detailed validation reports with pass/fail status
+  - **Multiple Test Games**: Support for various game types (simplified poker, betting games)
+- **Test Results**: 48 tests passing (all validation features working)
+- **Next Step**: Create benchmark suite for performance testing (Task 3.10)
