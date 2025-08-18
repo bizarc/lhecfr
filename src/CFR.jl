@@ -377,6 +377,19 @@ function get_infoset_count(state::CFRState)
 end
 
 """
+    get_infoset_storage(state::CFRState)
+
+Get the active information set storage (either indexed or regular).
+"""
+function get_infoset_storage(state::CFRState)
+    if state.indexed_storage !== nothing
+        return state.indexed_storage.storage
+    else
+        return state.storage
+    end
+end
+
+"""
     get_memory_usage(state::CFRState)
 
 Get estimated memory usage in MB.
@@ -471,6 +484,6 @@ export get_strategy, get_average_strategy
 export reset_regrets!, reset_strategy_sum!
 export get_infoset_count, get_memory_usage
 export print_progress
-export should_stop, get_training_stats
+export should_stop, get_training_stats, get_infoset_storage
 
 end # module

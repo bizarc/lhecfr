@@ -158,7 +158,7 @@ function parallel_cfr_iteration!(state::ParallelCFRState, tree::Tree.GameTree)
     end
     
     # Get all player nodes for parallel processing
-    all_nodes = Tree.TreeTraversal.collect_nodes_preorder(tree.root)
+    all_nodes = Tree.TreeIndexing.collect_nodes_preorder(tree.root)
     player_nodes = filter(n -> Tree.TreeNode.is_player_node(n), all_nodes)
     
     if state.thread_config.load_balancing == :static
@@ -182,8 +182,8 @@ function parallel_static_traversal!(state::ParallelCFRState, tree::Tree.GameTree
     chunk_size = ceil(Int, n_nodes / n_threads)
     
     @threads for tid in 1:n_threads
-        thread_id = Threads.threadid()
-        stats = state.thread_stats[thread_id]
+        # Use tid instead of threadid() to ensure we stay within bounds
+        stats = state.thread_stats[tid]
         
         # Calculate this thread's range
         start_idx = (tid - 1) * chunk_size + 1
@@ -209,9 +209,9 @@ function parallel_dynamic_traversal!(state::ParallelCFRState, tree::Tree.GameTre
     next_idx = Threads.Atomic{Int}(1)
     n_nodes = length(nodes)
     
-    @threads for _ in 1:state.thread_config.num_threads
-        thread_id = Threads.threadid()
-        stats = state.thread_stats[thread_id]
+    @threads for tid in 1:state.thread_config.num_threads
+        # Use tid instead of threadid() to ensure we stay within bounds
+        stats = state.thread_stats[tid]
         
         while true
             # Get next work item
@@ -247,8 +247,8 @@ function parallel_work_stealing_traversal!(state::ParallelCFRState, tree::Tree.G
     end
     
     @threads for tid in 1:n_threads
-        thread_id = Threads.threadid()
-        stats = state.thread_stats[thread_id]
+        # Use tid instead of threadid() to ensure we stay within bounds
+        stats = state.thread_stats[tid]
         my_queue = work_queues[tid]
         my_lock = queue_locks[tid]
         

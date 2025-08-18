@@ -8,6 +8,10 @@ include("CFR.jl")
 include("CFRMetrics.jl")
 include("CFRTraversal.jl")
 include("ThreadedCFR.jl")
+include("SolverConfig.jl")
+include("ProgressTracker.jl")
+include("Checkpoint.jl")
+include("PreflopSolver.jl")
 include("BestResponse.jl")
 include("Persist.jl")
 include("CLI.jl")
@@ -20,6 +24,10 @@ using .CFR
 using .CFRMetrics
 using .CFRTraversal
 using .ThreadedCFR
+using .SolverConfig
+using .ProgressTracker
+using .Checkpoint
+using .PreflopSolver
 using .BestResponse
 using .Persist
 using .CLI
